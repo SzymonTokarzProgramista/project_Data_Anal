@@ -6,13 +6,15 @@ data {
   array[nGames] int<lower=1, upper=nPlayers> player2;
   array[nGames] real p1Logit;
   array[nGames] real p2Logit;
-  array[nGames] real oddsDiff;  // np. log(1/p1_odds) - log(1/p2_odds)
+  array[nGames] real oddsDiff;
+  array[nGames] real dominance;  // Nowa zmienna – znormalizowana dominacja
 }
 
 parameters {
   real<lower=0> sigma;
-  real beta_rank;   // waga siły z rankingu ATP
-  real beta_odds;   // waga kursów bukmacherskich
+  real beta_rank;
+  real beta_odds;
+  real beta_dom;  // Nowy współczynnik dla dominacji
 }
 
 transformed parameters {
@@ -20,7 +22,8 @@ transformed parameters {
 
   for (i in 1:nGames) {
     predictor[i] = beta_rank * (playerStrength[player1[i]] - playerStrength[player2[i]]) +
-                   beta_odds * oddsDiff[i];
+                   beta_odds * oddsDiff[i] +
+                   beta_dom * dominance[i];  // Dodajemy wpływ dominacji
   }
 }
 
@@ -28,6 +31,7 @@ model {
   sigma ~ normal(0, 1);
   beta_rank ~ normal(0, 1);
   beta_odds ~ normal(0, 1);
+  beta_dom ~ normal(0, 1);  // Priorytet dominacji
 
   p1Logit ~ normal(predictor, sigma);
   p2Logit ~ normal(-predictor, sigma);
